@@ -33,11 +33,9 @@ const transporter = nodemailer.createTransport({
     secure: false,
     auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        pass: process.env.EMAIL_PASS
         }
-    
-});
-
+    });
 // ---- Middleware to verify login ----
 function authMiddleware(req, res, next) {
     const token = req.headers['authorization'];
