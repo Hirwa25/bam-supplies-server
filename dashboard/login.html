@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JFG - Login</title>
+    <link rel="stylesheet" href="CSS/dashboard.css">
+</head>
+<body>
+    <div class="login-card">
+        <div class="logo">
+            <h2>Grupo <span>JFG</span></h2>
+            <p>Order Management System</p>
+        </div>
+
+        <div class="form-group">
+            <label>Email / E-mail</label>
+            <input type="email" id="email" placeholder="your@email.com">
+        </div>
+
+        <div class="form-group">
+            <label>Password / Senha</label>
+            <input type="password" id="password" placeholder="••••••••">
+        </div>
+        
+        <button class="btn-login" onclick="login()">
+            Login / Entrar
+        </button>
+
+        <p class="error-msg" id="errorMsg">
+            <i class="fa-solid fa-circle-exclamation"></i>
+            Invalid email or password / Email ou senha incorretos
+        </p>
+
+        <div class="back-link">
+            <a href="../../index.html">← Back to website / Voltar ao website</a>
+        </div>
+    </div>   
+
+    <script>
+        async function login() {
+            console.log('Login function called!');
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            console.log('Email:', email); // ← add this
+            console.log('Password:', password);
+            const errorMsg = document.getElementById('errorMsg');
+            errorMsg.style.display = 'none'
+
+            try{
+                const response = await fetch('http://localhost:3000/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type' : 'application/json' },
+                    body: JSON.stringify({email, password})    
+                });
+                console.log('Response status:', response.status);
+                const result = await response.json();
+                console.log('Result:', result);
+                if(result.success) {
+                    localStorage.setItem('token', result.token);
+                    localStorage.setItem('name', result.name);
+                    localStorage.setItem('role', result.role);
+                    window.location.href = 'dashboard.html';
+                } else {
+                    errorMsg.style.display = 'block';
+                }
+            }catch (error) {
+                errorMsg.style.display = 'block';
+            }
+        }
+
+        // Allow pressing Enter to login
+        document.addEventListener('keypress', (e) => {
+            if (e.key=='Enter') login();
+        });
+
+    </script>
+</body>
+</html>

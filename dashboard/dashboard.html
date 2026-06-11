@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JFG-Dashboard</title>
+</head>
+<body class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <span>Grupo <strong>JFG</strong></span>
+            <small>Order Management</small>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="dashboard.html" class="nav-item active">
+                <i class="fa-solid fa-grid-2"></i> Dashboard
+            </a>
+            <a href="orders.html" class="nav-item">
+                <i class="fa-solid fa-list"></i> All Orders / Encomendas
+            </a>
+            <a href="new-order.html" class="nav-item">
+                <i class="fa-solid fa-plus"></i> New Order / Nova Encomenda
+            </a>
+            <a href="users.html" class="nav-item" id="usersLink">
+                <i class="fa-solid fa-users"></i> Users / Utilizadores
+            </a>
+        </nav>
+        <div class="sidebar-bottom">
+            <a href="../../index.html" class="nav-item">
+                <i class="fa-solid fa-globe"></i> Website
+            </a>
+            <a href="#" class="nav-item" onclick="logout()">
+                <i class="fa-solid fa-right-from-bracket"></i> Logout / Sair
+            </a>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <div class="main">
+        <div class="topbar">
+            <h1 class="page-title">Dashboard</h1>
+            <div class="topbar-right">
+                <span class="welcome-text">Welcome, <strong id="userName"></strong></span>
+                <div class="avatar" id="userAvatar"></div>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Alert -->
+            <div class="alert-box" id="alertBox" style="display:none">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span id="alertText"></span>
+            </div>
+
+            <!-- Metrics -->
+            <div class="metrics">
+                <div class="metric-card">
+                    <div class="metric-label">Total Orders / Encomendas</div>
+                    <div class="metric-value" id="totalOrders">0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">In Progress / Em Curso</div>
+                    <div class="metric-value blue" id="inProgress">0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Due Soon / Entrega Próxima</div>
+                    <div class="metric-value red" id="dueSoon">0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Delivered / Entregues</div>
+                    <div class="metric-value green" id="delivered">0</div>
+                </div>
+            </div>
+
+            <!-- Recent Orders -->
+            <div class="table-section">
+                <div class="table-header">
+                    <h2 class="section-title">Recent Orders / Encomendas Recentes</h2>
+                    <a href="new-order.html" class="btn-add">
+                        <i class="fa-solid fa-plus"></i> New Order
+                    </a>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Client</th>
+                                <th>Vessel / Navio</th>
+                                <th>Port / Porto</th>
+                                <th>Order Date</th>
+                                <th>Delivery / Entrega</th>
+                                <th>Status</th>
+                                <th>Source</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTable">
+                            <tr><td colspan="7" style="text-align:center; padding:20px; color:#888">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check login
+        const token = localStorage.getItem('token');
+        const name = localStorage.getItem('name');
+        const role = localStorage.getItem('role');
+
+        if (!token) window.location.href = 'login.html';
+
+        // Set user info
+        document.getElementById('userName').textContent = name;
+        document.getElementById('userAvatar').textContent = name ? name.charAt(0).toUpperCase() : 'U';
+
+        // Hide users link for staff
+        if (role !== 'admin') {
+            document.getElementById('usersLink').style.display = 'none';
+        }
+
+        // Logout
+        function logout() {
+            localStorage.clear();
+            window.location.href = 'login.html';
+        }
+
+        // Fetch orders
+        async function loadOrders() {
+            try {
+                const response = await fetch('http://localhost:3000/api/orders', {
+                    headers: { 'authorization': token }
+                });
+                const result = await response.json();
+
+                if (!result.success) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                const orders = result.orders;
+                const today = new Date();
+                const twoDaysLater = new Date();
+                twoDaysLater.setDate(today.getDate() + 2);
+
+                // Calculate metrics
+                let inProgress = 0, dueSoon = 0, delivered = 0;
+                orders.forEach(order => {
+                    if (order.status === 'In Progress') inProgress++;
+                    if (order.status === 'Delivered') delivered++;
+                    const delivery = new Date(order.delivery_date);
+                    if (delivery <= twoDaysLater && order.status !== 'Delivered') dueSoon++;
+                });
+
+                document.getElementById('totalOrders').textContent = orders.length;
+                document.getElementById('inProgress').textContent = inProgress;
+                document.getElementById('dueSoon').textContent = dueSoon;
+                document.getElementById('delivered').textContent = delivered;
+
+                // Alert for due soon
+                if (dueSoon > 0) {
+                    document.getElementById('alertBox').style.display = 'flex';
+                    document.getElementById('alertText').textContent = 
+                        `${dueSoon} order(s) have delivery dates in the next 48 hours!`;
+                }
+
+                // Render table
+                const tbody = document.getElementById('ordersTable');
+                if (orders.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#888">No orders yet / Sem encomendas</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = orders.slice(0, 10).map(order => {
+                    const isUrgent = new Date(order.delivery_date) <= twoDaysLater && order.status !== 'Delivered';
+                    return `
+                        <tr onclick="window.location.href='order-detail.html?id=${order.id}'" style="cursor:pointer">
+                            <td>${order.client}</td>
+                            <td>${order.vessel}</td>
+                            <td>${order.port}</td>
+                            <td>${order.order_date}</td>
+                            <td style="color:${isUrgent ? '#D31817' : 'inherit'}; font-weight:${isUrgent ? '600' : 'normal'}">
+                                ${order.delivery_date}
+                            </td>
+                            <td><span class="badge badge-${order.status.toLowerCase().replace(' ', '-')}">${order.status}</span></td>
+                            <td><span class="source-badge">${order.source}</span></td>
+                        </tr>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Error loading orders:', error);
+            }
+        }
+
+        loadOrders();
+    </script>
+</body>
+</html>
