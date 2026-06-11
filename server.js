@@ -33,9 +33,9 @@ const transporter = nodemailer.createTransport({
     secure: false,
     auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-}
-    }
+        pass: process.env.EMAIL_PASS,
+        }
+    
 });
 
 // ---- Middleware to verify login ----
@@ -131,7 +131,7 @@ app.post('/send', upload.single('attachment'), async (req, res) => {
     const { name, email, subject, message } = req.body;
     const mailOptions = {
         from: email,
-        to: 'process.env.EMAIL_USER,',
+        to: process.env.EMAIL_USER,
         subject: subject || 'New message from website',
         html: `
             <h3>New message from BAM Supplies website</h3>
@@ -155,6 +155,6 @@ app.post('/send', upload.single('attachment'), async (req, res) => {
     }
 });
 
-app.listen(3000, () => {
+app.listen(process.env.PORT || 3000, () => {
     console.log('Server running on port 3000');
 });
